@@ -13,6 +13,18 @@ create table if not exists contacts (
   created_at timestamptz not null default now()
 );
 
+insert into storage.buckets (id, name, public)
+values ('qr-codes', 'qr-codes', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "qr_codes_v1_read" on storage.objects;
+create policy "qr_codes_v1_read" on storage.objects
+  for select using (bucket_id = 'qr-codes');
+
+drop policy if exists "qr_codes_v1_write" on storage.objects;
+create policy "qr_codes_v1_write" on storage.objects
+  for all using (bucket_id = 'qr-codes') with check (bucket_id = 'qr-codes');
+
 alter table contacts enable row level security;
 drop policy if exists "contacts_v1_read" on contacts;
 create policy "contacts_v1_read" on contacts for select using (true);
@@ -104,15 +116,19 @@ create policy "audit_logs_v1_write" on audit_logs for all using (true) with chec
 insert into contacts (id, full_name, job_title, company, email, phone, website, address, vcard_string, qr_image_url) values
   ('a1b2c3d4-0001-0001-0001-000000000001', 'Priya Sharma', 'Head of Operations', 'EcoVentures Pte Ltd', 'priya@ecoventures.sg', '+65 9123 4567', 'https://ecoventures.sg', '10 Anson Rd, Singapore 079903', 'BEGIN:VCARD\nVERSION:3.0\nFN:Priya Sharma\nORG:EcoVentures Pte Ltd\nEMAIL:priya@ecoventures.sg\nTEL:+6591234567\nEND:VCARD', null),
   ('a1b2c3d4-0002-0002-0002-000000000002', 'James Okafor', 'Sales Director', 'GreenLoop Corp', 'james@greenloop.io', '+1 415 555 0192', 'https://greenloop.io', '240 Kent Ave, Brooklyn NY 11249', 'BEGIN:VCARD\nVERSION:3.0\nFN:James Okafor\nORG:GreenLoop Corp\nEMAIL:james@greenloop.io\nTEL:+14155550192\nEND:VCARD', null),
-  ('a1b2c3d4-0003-0003-0003-000000000003', 'Mei Lin Tan', 'Sustainability Lead', 'Bamboo Works Ltd', 'mei@bamboworks.co', '+60 12 345 6789', 'https://bamboworks.co', 'Jalan Ampang, 50450 KL, Malaysia', 'BEGIN:VCARD\nVERSION:3.0\nFN:Mei Lin Tan\nORG:Bamboo Works Ltd\nEMAIL:mei@bamboworks.co\nTEL:+60123456789\nEND:VCARD', null);
+  ('a1b2c3d4-0003-0003-0003-000000000003', 'Mei Lin Tan', 'Sustainability Lead', 'Bamboo Works Ltd', 'mei@bamboworks.co', '+60 12 345 6789', 'https://bamboworks.co', 'Jalan Ampang, 50450 KL, Malaysia', 'BEGIN:VCARD\nVERSION:3.0\nFN:Mei Lin Tan\nORG:Bamboo Works Ltd\nEMAIL:mei@bamboworks.co\nTEL:+60123456789\nEND:VCARD', null)
+on conflict (id) do nothing;
 
 insert into design_sessions (id, contact_id, stripe_payment_intent_id, payment_status, attempts_remaining, shipping_name, shipping_address, shipping_city, shipping_country, shipping_postal_code, status) values
   ('b1000000-0001-0001-0001-000000000001', 'a1b2c3d4-0001-0001-0001-000000000001', 'pi_demo_001', 'paid', 3, 'Priya Sharma', '10 Anson Rd', 'Singapore', 'SG', '079903', 'active'),
-  ('b1000000-0002-0002-0002-000000000002', 'a1b2c3d4-0002-0002-0002-000000000002', 'pi_demo_002', 'paid', 0, 'James Okafor', '240 Kent Ave', 'Brooklyn', 'US', '11249', 'completed');
+  ('b1000000-0002-0002-0002-000000000002', 'a1b2c3d4-0002-0002-0002-000000000002', 'pi_demo_002', 'paid', 0, 'James Okafor', '240 Kent Ave', 'Brooklyn', 'US', '11249', 'completed')
+on conflict (id) do nothing;
 
 insert into design_variants (id, session_id, attempt_number, prompt_used, image_url, image_url_source, image_url_confidence, image_url_review_status, is_accepted) values
   ('c1000000-0001-0001-0001-000000000001', 'b1000000-0001-0001-0001-000000000001', 1, 'Minimalist green metal card with leaf motif for EcoVentures', null, 'openai-dall-e-3', 0.91, 'unreviewed', false),
-  ('c1000000-0002-0002-0002-000000000002', 'b1000000-0002-0002-0002-000000000002', 1, 'Bold dark metal card with recycled-material texture for GreenLoop', null, 'openai-dall-e-3', 0.88, 'approved', true);
+  ('c1000000-0002-0002-0002-000000000002', 'b1000000-0002-0002-0002-000000000002', 1, 'Bold dark metal card with recycled-material texture for GreenLoop', null, 'openai-dall-e-3', 0.88, 'approved', true)
+on conflict (id) do nothing;
 
 insert into orders (id, contact_id, session_id, accepted_variant_id, status, shipping_name, shipping_address, shipping_city, shipping_country, shipping_postal_code, amount_paid_cents, builder_notified, fulfilment_status) values
-  ('d1000000-0001-0001-0001-000000000001', 'a1b2c3d4-0002-0002-0002-000000000002', 'b1000000-0002-0002-0002-000000000002', 'c1000000-0002-0002-0002-000000000002', 'confirmed', 'James Okafor', '240 Kent Ave', 'Brooklyn', 'US', '11249', 899, true, 'in_production');
+  ('d1000000-0001-0001-0001-000000000001', 'a1b2c3d4-0002-0002-0002-000000000002', 'b1000000-0002-0002-0002-000000000002', 'c1000000-0002-0002-0002-000000000002', 'confirmed', 'James Okafor', '240 Kent Ave', 'Brooklyn', 'US', '11249', 899, true, 'in_production')
+on conflict (id) do nothing;
